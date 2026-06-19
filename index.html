@@ -14,7 +14,6 @@
 </head>
 <body class="w-full min-h-screen relative text-stone-800 selection:bg-amber-200">
 
-  <!-- BOTÓN FLOTANTE WHATSAPP -->
   <a href="https://wa.me/5493435443463?text=Hola!%20Quería%20hacer%20un%20pedido" target="_blank" rel="noopener noreferrer" class="fixed bottom-6 right-6 z-40 bg-emerald-500 text-white p-4 rounded-full shadow-2xl hover:bg-emerald-600 transition-all transform hover:scale-110 flex items-center justify-center">
     <i data-lucide="message-circle" class="w-7 h-7 fill-white/10"></i>
   </a>
@@ -23,7 +22,6 @@
     <img class="absolute inset-0 w-full h-full object-cover transform scale-105 animate-[subtle-zoom_20s_infinite_alternate]" src="https://images.pexels.com/photos/15491784/pexels-photo-15491784.jpeg?auto=compress&cs=tinysrgb&w=1280" alt="Interior Almacén BKL">
     <div class="absolute inset-0 bg-stone-950/60 backdrop-blur-[1px]"></div>
     
-    <!-- CARTEL DINÁMICO DE ESTADO -->
     <div id="cartel-estado" class="absolute top-6 right-6 z-30 px-4 py-2 rounded-full font-bold text-sm md:text-base text-white shadow-xl flex items-center gap-2 bg-stone-700 backdrop-blur-md transition-all duration-300">
       <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span> Cargando...
     </div>
@@ -35,7 +33,6 @@
       <div class="w-16 h-[2px] bg-amber-400 my-6"></div>
       <p class="text-base md:text-lg text-stone-200 max-w-md font-normal leading-relaxed">Tu despensa de barrio, atendida con la calidez de siempre y con todo lo que necesitás para el día a día.</p>
       
-      <!-- BOTÓN PRINCIPAL WHATSAPP -->
       <a href="https://wa.me/5493435443463" target="_blank" class="mt-8 px-8 py-3.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-stone-950 font-bold rounded-2xl shadow-lg hover:shadow-amber-500/20 transition-all flex items-center gap-3 tracking-wide text-sm md:text-base">
         <i data-lucide="phone" class="w-5 h-5"></i> Hacer Pedido por WhatsApp
       </a>
@@ -48,7 +45,6 @@
       <p class="text-stone-500 mt-3 text-sm md:text-base">Trabajamos con primeras marcas y mercadería fresca todas las semanas.</p>
     </div>
 
-    <!-- TARJETAS DE PRODUCTOS -->
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
       <div class="group rounded-3xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.08)] bg-white border border-stone-100/80 transition-all duration-300 transform hover:-translate-y-1">
         <div class="h-48 overflow-hidden relative">
@@ -95,7 +91,6 @@
       </div>
     </div>
 
-    <!-- SECCIÓN DE DETALLES (DATOS REALES) -->
     <section class="w-full mt-24 bg-stone-900 text-stone-100 rounded-[2.5rem] p-8 md:p-12 shadow-xl relative overflow-hidden">
       <div class="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl pointer-events-none"></div>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-10 text-center md:text-left relative z-10">
@@ -125,7 +120,6 @@
     </button>
   </footer>
 
-  <!-- PANEL DE ADMINISTRACIÓN LOCAL -->
   <div id="panel-control" class="hidden fixed inset-0 bg-stone-950/80 z-50 flex items-center justify-center p-4 backdrop-blur-md">
     <div class="bg-white rounded-[2rem] p-6 w-full max-w-md shadow-2xl border border-stone-100 text-stone-800">
       <div class="flex justify-between items-center mb-6">
@@ -143,7 +137,6 @@
     </div>
   </div>
 
-  <!-- SCRIPT CON NUEVA LÓGICA INTEGRADA -->
   <script>
     const _supabaseUrl = 'https://hsngbhuporijadvyaleh.supabase.co';
     const _supabaseKey = 'sb_publishable_WO7ZDYAd5U81Fqi2EaC0iA_dOcYbo2y';
@@ -154,13 +147,11 @@
     async function obtenerEstado() {
       if(!supabase) return;
       try {
-        // Consultamos el campo 'estado' en lugar de 'abierto'
-        let { data, error } = await supabase.from('estado_local').select('estado').eq('id', 1);
+        // Sacamos el .eq('id', 1) para que lea la primera fila que encuentre en la tabla
+        let { data, error } = await supabase.from('estado_local').select('estado').limit(1);
         if (data && data.length > 0 && data[0].estado) {
           fraseEstadoActual = data[0].estado.toString();
         } else {
-          // Si por alguna razón está vacío, creamos un registro inicial
-          await supabase.from('estado_local').upsert([{ id: 1, estado: 'Abierto' }]);
           fraseEstadoActual = 'Abierto';
         }
         actualizarVisuals();
@@ -177,7 +168,6 @@
       
       const textoNormalizado = fraseEstadoActual.toLowerCase().trim();
 
-      // Evaluación limpia de las 4 opciones de texto
       if (textoNormalizado.includes('abierto') && textoNormalizado.includes('volvimos')) {
         cartel.className = "absolute top-6 right-6 z-30 px-4 py-2 rounded-full font-bold text-sm md:text-base text-white shadow-xl flex items-center gap-2 bg-emerald-500 backdrop-blur-md";
         cartel.innerHTML = `<span class="w-2 h-2 rounded-full bg-white animate-pulse"></span> Abierto - ¡Ya Volvimos!`;
@@ -200,7 +190,13 @@
       fraseEstadoActual = nuevoTextoEstado;
       actualizarVisuals();
       try {
-        await supabase.from('estado_local').update({ estado: nuevoTextoEstado }).eq('id', 1);
+        // Obtenemos primero la fila para actualizar sobre seguro
+        let { data } = await supabase.from('estado_local').select('id').limit(1);
+        if(data && data.length > 0) {
+          await supabase.from('estado_local').update({ estado: nuevoTextoEstado }).eq('id', data[0].id);
+        } else {
+          await supabase.from('estado_local').insert([{ estado: nuevoTextoEstado }]);
+        }
       } catch(e) { console.error(e); }
     }
 
@@ -218,11 +214,10 @@
       obtenerEstado();
       if(window.lucide) lucide.createIcons();
       
-      // Escucha activa en tiempo real de cambios para reflejarlos al instante
       if(supabase) {
         supabase
           .channel('cambios-estado')
-          .on('postgres_changes', { event: 'UPDATE', scheme: 'public', table: 'estado_local' }, payload => {
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'estado_local' }, payload => {
               if(payload.new && payload.new.estado) {
                   fraseEstadoActual = payload.new.estado;
                   actualizarVisuals();
