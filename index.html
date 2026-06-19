@@ -26,7 +26,7 @@
         </div>
 
         <!-- CARTEL DINÁMICO DE ESTADO (CONEXIÓN SUPABASE) -->
-        <div id="status-card" class="w-full bg-gray-800 rounded-2xl p-6 mb-8 text-center border border-gray-700 shadow-xl transition-all duration-500 transform scale-95 opacity-50">
+        <div id="status-card" class="w-full bg-gray-800 rounded-2xl p-6 mb-8 text-center border border-gray-700 shadow-xl transition-all duration-500 transform scale-100 opacity-100">
             <div class="inline-flex items-center justify-center space-x-2 mb-2">
                 <span id="status-dot" class="w-3 h-3 rounded-full animate-pulse"></span>
                 <span id="status-text" class="text-xl font-bold tracking-wide">Cargando estado...</span>
@@ -79,17 +79,14 @@
     <!-- LÓGICA DE CONEXIÓN A SUPABASE -->
     <script>
         // CONFIGURACIÓN DE TU CLIENTE SUPABASE
-        // Recordá que estas credenciales ya están vinculadas a tu base de datos de BKL
+        // Pega acá abajo tus credenciales de la versión anterior
         const SUPABASE_URL = "https://tu-url-de-supabase.supabase.co"; 
         const SUPABASE_KEY = "tu-anon-key-de-supabase"; 
         
-        // Reemplazar arriba con tus datos reales si los tenés a mano, 
-        // o si ya tenías un bloque de script con las claves puestas, dejalas como estaban.
         const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         async function obtenerEstado() {
             try {
-                // Consultamos la tabla 'estado_local' (asegurate que se llame así en tu Supabase)
                 const { data, error } = await supabase
                     .from('estado_local')
                     .select('estado')
@@ -100,57 +97,56 @@
                 actualizarInterfaz(data.estado);
             } catch (err) {
                 console.error("Error al conectar con Supabase:", err);
-                // Estado por defecto en caso de falla
-                actualizarInterfaz("Cerrado");
+                actualizarInterfaz("cerrado");
             }
         }
 
-        function actualizarInterfaz(estado) {
+        function actualizarInterfaz(estadoOriginal) {
             const card = document.getElementById('status-card');
             const dot = document.getElementById('status-dot');
             const text = document.getElementById('status-text');
+
+            // Convertimos a minúsculas y limpiamos espacios rebeldes para evitar errores
+            const estado = estadoOriginal ? estadoOriginal.toString().toLowerCase().trim() : "";
 
             // Limpiamos clases previas
             dot.className = "w-3 h-3 rounded-full animate-pulse ";
             card.className = "w-full bg-gray-800 rounded-2xl p-6 mb-8 text-center border shadow-xl transition-all duration-500 transform scale-100 opacity-100 ";
 
-            // Lógica para los 4 estados que me pasaste
-            switch(estado) {
-                case 'Abierto':
-                    text.innerText = "Abierto Ahora";
-                    text.className = "text-xl font-bold tracking-wide text-emerald-400";
-                    dot.classList.add("bg-emerald-500");
-                    card.classList.add("border-emerald-500/30", "shadow-emerald-950/20");
-                    break;
-                case 'Abierto Ya Volvimos':
-                    text.innerText = "Abierto - ¡Ya Volvimos!";
-                    text.className = "text-xl font-bold tracking-wide text-emerald-400";
-                    dot.classList.add("bg-emerald-500");
-                    card.classList.add("border-emerald-500/30", "shadow-emerald-950/20");
-                    break;
-                case 'Cerrado Ya Volvemos':
-                    text.innerText = "Cerrado - Ya Volvemos";
-                    text.className = "text-xl font-bold tracking-wide text-amber-400";
-                    dot.classList.add("bg-amber-500");
-                    card.classList.add("border-amber-500/30", "shadow-amber-950/20");
-                    break;
-                case 'Cerrado':
-                default:
-                    text.innerText = "Cerrado en este momento";
-                    text.className = "text-xl font-bold tracking-wide text-gray-400";
-                    dot.classList.add("bg-gray-500");
-                    card.classList.add("border-gray-700", "shadow-black/20");
-                    break;
+            // Lógica flexible para los estados
+            if (estado.includes('abierto') && estado.includes('volvimos')) {
+                text.innerText = "Abierto - ¡Ya Volvimos!";
+                text.className = "text-xl font-bold tracking-wide text-emerald-400";
+                dot.classList.add("bg-emerald-500");
+                card.classList.add("border-emerald-500/30", "shadow-emerald-950/20");
+            } 
+            else if (estado.includes('cerrado') && estado.includes('volvemos')) {
+                text.innerText = "Cerrado - Ya Volvemos";
+                text.className = "text-xl font-bold tracking-wide text-amber-400";
+                dot.classList.add("bg-amber-500");
+                card.classList.add("border-amber-500/30", "shadow-amber-950/20");
+            } 
+            else if (estado.includes('abierto')) {
+                text.innerText = "Abierto Ahora";
+                text.className = "text-xl font-bold tracking-wide text-emerald-400";
+                dot.classList.add("bg-emerald-500");
+                card.classList.add("border-emerald-500/30", "shadow-emerald-950/20");
+            } 
+            else {
+                text.innerText = "Cerrado en este momento";
+                text.className = "text-xl font-bold tracking-wide text-gray-400";
+                dot.classList.add("bg-gray-500");
+                card.classList.add("border-gray-700", "shadow-black/20");
             }
         }
 
         // Ejecutar al cargar la página
         obtenerEstado();
 
-        // Escuchar cambios en tiempo real desde Supabase para que cambie solo sin recargar la web
+        // Escuchar en tiempo real
         supabase
             .channel('cambios-estado')
-            .on('postgres_changes', { event: 'UPDATE', scheme: 'public', table: 'estado_local' }, payload => {
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'estado_local' }, payload => {
                 if(payload.new && payload.new.estado) {
                     actualizarInterfaz(payload.new.estado);
                 }
