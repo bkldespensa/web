@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Despensa BKL - Almacén</title>
-    <!-- Tailwind CSS (Versión estable para que no se rompa el diseño) -->
+    <!-- Tailwind CSS (Versión estable) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome para los iconos -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -93,10 +93,14 @@
 
                 if (error) throw error;
 
+                // Si data o estado vienen vacíos, tiramos error para que use el plan B
+                if (!data || !data.estado) throw new Error("Datos vacíos");
+
                 actualizarInterfaz(data.estado);
             } catch (err) {
-                console.error("Error al conectar con Supabase:", err);
-                actualizarInterfaz("cerrado");
+                console.error("Error al conectar con Supabase, usando estado por defecto:", err);
+                // Si la conexión se satura, por defecto muestra "Abierto" para no perder ventas, o cambialo a "cerrado" si preferís
+                actualizarInterfaz("abierto"); 
             }
         }
 
@@ -136,16 +140,22 @@
             }
         }
 
+        // Carga inicial
         obtenerEstado();
 
-        supabase
-            .channel('cambios-estado')
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'estado_local' }, payload => {
-                if(payload.new && payload.new.estado) {
-                    actualizarInterfaz(payload.new.estado);
-                }
-            })
-            .subscribe();
+        // Escucha en tiempo real protegida
+        try {
+            supabase
+                .channel('cambios-estado')
+                .on('postgres_changes', { event: 'UPDATE', scheme: 'public', table: 'estado_local' }, payload => {
+                    if(payload.new && payload.new.estado) {
+                        actualizarInterfaz(payload.new.estado);
+                    }
+                })
+                .subscribe();
+        } catch(e) {
+            console.log("El tiempo real no está disponible, se mantiene el estado estático.");
+        }
     </script>
 </body>
 </html>
